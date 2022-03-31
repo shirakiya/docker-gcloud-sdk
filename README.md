@@ -1,2 +1,3 @@
 # docker-gcloud-sdk
-Docker image for gcloud-sdk on multi platforms
+Docker image that contains gcloud-sdk and kubectl CLI. It is assumed to build
+image on your own machine.
