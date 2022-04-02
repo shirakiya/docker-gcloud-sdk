@@ -1,0 +1,59 @@
+name: Check Version
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 9 * * *"
+
+jobs:
+  check_version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: current_gcloud_sdk_version
+        name: Get current gcloud-sdk version
+        run: echo "::set-output name=version::$(cat ./gcloud_sdk_version.txt)"
+      - name: Show current version
+        run: echo "${{ steps.current_gcloud_sdk_version.outputs.version }}"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          version: latest
+      - id: latest_gcloud_sdk_version
+        name: Show gcloud-sdk version
+        run: |
+          # It is assumed that `gcloud version` outputs as below.
+          #
+          # """
+          # Google Cloud SDK 379.0.0
+          # bq 2.0.74
+          # ...
+          # """
+          LATEST_VERSION=`gcloud version | grep "Google Cloud SDK" | awk '{ print $4}'`
+          echo "::set-output name=version::${LATEST_VERSION}"
+      - name: Show latest version
+        run: echo "${{ steps.latest_gcloud_sdk_version.outputs.version }}"
+
+      - name: Create pull-request if new version is published
+        if: ${{ steps.current_gcloud_sdk_version.outputs.version != steps.latest_gcloud_sdk_version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION=${{ steps.latest_gcloud_sdk_version.outputs.version }}
+          echo $NEW_VERSION > ./gcloud_sdk_version.txt
+          UNDERSCORED_NEW_VERSION=`echo $NEW_VERSION | sed 's/\./_/g'`
+          BRANCH="gloud_sdk_version_$UNDERSCORED_NEW_VERSION"
+          git switch -c $BRANCH
+          git add ./gcloud_sdk_version.txt
+
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          COMMIT_MESSAGE="update gcloud-sdk version to $NEW_VERSION"
+          git commit -m "$COMMIT_MESSAGE"
+          git push origin $BRANCH
+
+          gh pr create -B main -H $BRANCH -t "$COMMIT_MESSAGE" -b "Update from ${{ steps.current_gcloud_sdk_version.outputs.version }} to $NEW_VERSION"
