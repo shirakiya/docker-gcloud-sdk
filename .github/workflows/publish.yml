@@ -30,4 +30,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: shirakiya/gcloud-sdk:${{ steps.get_version.outputs.version }}
+          tags: shirakiya/gcloud-sdk:latest,shirakiya/gcloud-sdk:${{ steps.get_version.outputs.version }}
