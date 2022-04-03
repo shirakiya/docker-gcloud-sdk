@@ -1,5 +1,7 @@
 # docker-gcloud-sdk
 
+[![Check Version](https://github.com/shirakiya/docker-gcloud-sdk/actions/workflows/check_version.yml/badge.svg?branch=main)](https://github.com/shirakiya/docker-gcloud-sdk/actions/workflows/check_version.yml)
+
 This project builds and publishes the docker images that contains [gcloud-sdk](https://cloud.google.com/cli)
 and [kubectl](https://kubernetes.io/ja/docs/reference/kubectl/overview/). The Docker Hub repository page is below.
 
