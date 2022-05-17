@@ -20,7 +20,7 @@ jobs:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v1
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - id: get_version
         name: Get version
         run: echo "::set-output name=version::$(cat ./gcloud_sdk_version.txt)"
