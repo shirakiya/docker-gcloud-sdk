@@ -12,7 +12,7 @@ jobs:
 
       - id: current_gcloud_sdk_version
         name: Get current gcloud-sdk version
-        run: echo "::set-output name=version::$(cat ./gcloud_sdk_version.txt)"
+        run: echo "version=$(cat ./gcloud_sdk_version.txt)" >> $GITHUB_OUTPUT
       - name: Show current version
         run: echo "${{ steps.current_gcloud_sdk_version.outputs.version }}"
 
@@ -31,7 +31,7 @@ jobs:
           # ...
           # """
           LATEST_VERSION=`gcloud version | grep "Google Cloud SDK" | awk '{ print $4}'`
-          echo "::set-output name=version::${LATEST_VERSION}"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
       - name: Show latest version
         run: echo "${{ steps.latest_gcloud_sdk_version.outputs.version }}"
 
