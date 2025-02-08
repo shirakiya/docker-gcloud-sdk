@@ -1,4 +1,4 @@
-FROM python:3.13.1
+FROM python:3.13.2
 
 COPY gcloud_sdk_version.txt /tmp/gcloud_sdk_version.txt
 
