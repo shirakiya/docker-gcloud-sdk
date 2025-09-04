@@ -17,7 +17,7 @@ jobs:
         run: echo "${{ steps.current_gcloud_sdk_version.outputs.version }}"
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           version: latest
       - id: latest_gcloud_sdk_version
