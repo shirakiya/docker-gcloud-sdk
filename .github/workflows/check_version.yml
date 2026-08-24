@@ -21,21 +21,13 @@ jobs:
         env:
           CURRENT_VERSION: ${{ steps.current_gcloud_sdk_version.outputs.version }}
         run: printf '%s\n' "$CURRENT_VERSION"
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          version: latest
-      - id: latest_gcloud_sdk_version
-        name: Show gcloud-sdk version
+          go-version-file: go.mod
+      - name: Get latest gcloud-sdk version
+        id: latest_gcloud_sdk_version
         run: |
-          # It is assumed that `gcloud version` outputs as below.
-          #
-          # """
-          # Google Cloud SDK 379.0.0
-          # bq 2.0.74
-          # ...
-          # """
-          LATEST_VERSION=`gcloud version | grep "Google Cloud SDK" | awk '{ print $4}'`
+          LATEST_VERSION="$(go run ./cmd/get-latest-version)"
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
       - name: Show latest version
         env:
