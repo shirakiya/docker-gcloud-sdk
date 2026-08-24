@@ -15,6 +15,8 @@ func TestGetLatestVersion(t *testing.T) {
 		t.Fatalf("GetLatestVersion returned an error: %v", err)
 	}
 
+	t.Logf("GetLatestVersion() output = %q", got)
+
 	if !versionFormatRe.MatchString(got) {
 		t.Fatalf("GetLatestVersion() output = %q, want an x.y.z version", got)
 	}
