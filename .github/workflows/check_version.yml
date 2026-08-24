@@ -18,7 +18,9 @@ jobs:
         name: Get current gcloud-sdk version
         run: echo "version=$(cat ./gcloud_sdk_version.txt)" >> $GITHUB_OUTPUT
       - name: Show current version
-        run: echo "${{ steps.current_gcloud_sdk_version.outputs.version }}"
+        env:
+          CURRENT_VERSION: ${{ steps.current_gcloud_sdk_version.outputs.version }}
+        run: printf '%s\n' "$CURRENT_VERSION"
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
@@ -36,21 +38,33 @@ jobs:
           LATEST_VERSION=`gcloud version | grep "Google Cloud SDK" | awk '{ print $4}'`
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
       - name: Show latest version
-        run: echo "${{ steps.latest_gcloud_sdk_version.outputs.version }}"
+        env:
+          LATEST_VERSION: ${{ steps.latest_gcloud_sdk_version.outputs.version }}
+        run: printf '%s\n' "$LATEST_VERSION"
       - name: Create pull-request if new version is published
         if: ${{ steps.current_gcloud_sdk_version.outputs.version != steps.latest_gcloud_sdk_version.outputs.version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_VERSION: ${{ steps.current_gcloud_sdk_version.outputs.version }}
+          NEW_VERSION: ${{ steps.latest_gcloud_sdk_version.outputs.version }}
         run: |
-          NEW_VERSION=${{ steps.latest_gcloud_sdk_version.outputs.version }}
-          echo $NEW_VERSION > ./gcloud_sdk_version.txt
-          UNDERSCORED_NEW_VERSION=`echo $NEW_VERSION | sed 's/\./_/g'`
-          BRANCH="gcloud_sdk_version_$UNDERSCORED_NEW_VERSION"
-          git switch -c $BRANCH
+          set -euo pipefail
+
+          if [[ ! "$NEW_VERSION" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+            echo "Invalid version: $NEW_VERSION" >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$NEW_VERSION" > ./gcloud_sdk_version.txt
+          UNDERSCORED_NEW_VERSION="${NEW_VERSION//./_}"
+          BRANCH="gcloud_sdk_version_${UNDERSCORED_NEW_VERSION}"
+          git switch -c "$BRANCH"
           git add ./gcloud_sdk_version.txt
 
           git config user.name github-actions
           git config user.email github-actions@github.com
           COMMIT_MESSAGE="update gcloud-sdk version to $NEW_VERSION"
           git commit -m "$COMMIT_MESSAGE"
-          git push origin $BRANCH
+          git push origin "$BRANCH"
 
-          gh pr create -B main -H $BRANCH -t "$COMMIT_MESSAGE" -b "Update from ${{ steps.current_gcloud_sdk_version.outputs.version }} to $NEW_VERSION"
+          gh pr create -B main -H "$BRANCH" -t "$COMMIT_MESSAGE" -b "Update from $CURRENT_VERSION to $NEW_VERSION"
