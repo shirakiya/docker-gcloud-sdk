@@ -7,15 +7,18 @@ on:
 jobs:
   check_version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
+        with:
+          persist-credentials: true
       - id: current_gcloud_sdk_version
         name: Get current gcloud-sdk version
         run: echo "version=$(cat ./gcloud_sdk_version.txt)" >> $GITHUB_OUTPUT
       - name: Show current version
         run: echo "${{ steps.current_gcloud_sdk_version.outputs.version }}"
-
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
@@ -34,16 +37,13 @@ jobs:
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
       - name: Show latest version
         run: echo "${{ steps.latest_gcloud_sdk_version.outputs.version }}"
-
       - name: Create pull-request if new version is published
         if: ${{ steps.current_gcloud_sdk_version.outputs.version != steps.latest_gcloud_sdk_version.outputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_VERSION=${{ steps.latest_gcloud_sdk_version.outputs.version }}
           echo $NEW_VERSION > ./gcloud_sdk_version.txt
           UNDERSCORED_NEW_VERSION=`echo $NEW_VERSION | sed 's/\./_/g'`
-          BRANCH="gloud_sdk_version_$UNDERSCORED_NEW_VERSION"
+          BRANCH="gcloud_sdk_version_$UNDERSCORED_NEW_VERSION"
           git switch -c $BRANCH
           git add ./gcloud_sdk_version.txt
 
