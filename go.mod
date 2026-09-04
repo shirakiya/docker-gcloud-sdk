@@ -3,7 +3,7 @@ module github.com/shirakiya/docker-gcloud-sdk
 go 1.27.0
 
 require (
-	cloud.google.com/go/storage v1.66.0
+	cloud.google.com/go/storage v1.67.0
 	golang.org/x/mod v0.40.0
 	google.golang.org/api v0.297.0
 )
