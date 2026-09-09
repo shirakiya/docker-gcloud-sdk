@@ -1,0 +1,71 @@
+name: Check running jobs
+
+on: pull_request
+
+permissions:
+  pull-requests: read
+  checks: read
+  statuses: read
+  actions: read
+  contents: read
+
+jobs:
+  check-running-jobs:
+    runs-on: ubuntu-latest
+    # Set generously long since this waits for all other jobs to complete,
+    # not just this job's own runtime.
+    timeout-minutes: 30
+    steps:
+      - name: Check for running jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          INTERVAL: 5
+          EXCLUDED_JOBS: renovate/stability-days
+        run: |
+          echo "Checking running jobs for PR #${PR_NUMBER} in loop..."
+
+          # Build excluded jobs filter
+          EXCLUDED_FILTER="(.name | contains(\"${{ github.job }}\") | not)"
+
+          if [ -n "$EXCLUDED_JOBS" ]; then
+            while IFS= read -r job_name; do
+              job_name=$(echo "$job_name" | xargs) # Trim whitespace
+              if [ -n "$job_name" ]; then
+                EXCLUDED_FILTER="$EXCLUDED_FILTER and (.name | contains(\"$job_name\") | not)"
+              fi
+            done <<< "$EXCLUDED_JOBS"
+          fi
+
+          echo "Excluded filter: $EXCLUDED_FILTER"
+
+          ITERATION=0
+
+          while true; do
+            ITERATION=$((ITERATION + 1))
+            echo "Checking iteration #${ITERATION}"
+
+            # Multiple runs of the same-named check can be attached to the same SHA (e.g. a workflow
+            # is re-run on approval, leaving a stale failed run from before the approval). To avoid
+            # picking up a stale result and failing incorrectly, keep only one run per workflow+name,
+            # preferring "pending" first and then the most recent startedAt.
+            CHECKS_RESULT=$(gh pr checks -R ${{ github.repository }} "$PR_NUMBER" --json workflow,name,bucket,state,startedAt,completedAt --jq "[.[] | select($EXCLUDED_FILTER)] | group_by([.workflow, .name]) | map(max_by([(.bucket == \"pending\"), (.startedAt // \"\")])) | .[]")
+            echo -e "checks result:\n${CHECKS_RESULT}"
+
+            FAILED_CHECKS=$(echo "$CHECKS_RESULT" | jq -r 'select(.bucket == "fail" or .bucket == "cancel") | .name')
+
+            if [ -n "$FAILED_CHECKS" ]; then
+              echo "::error::Found failed or cancelled checks in PR #${PR_NUMBER}: $(echo "$FAILED_CHECKS" | sort | tr '\n' ',' | sed 's/,$//')"
+              exit 1
+            fi
+
+            PROCEEDING_CHECKS=$(echo "$CHECKS_RESULT" | jq -r 'select(.bucket == "pending") | .name')
+
+            if [ -z "$PROCEEDING_CHECKS" ]; then
+              echo "All checks are completed"
+              break
+            fi
+
+            echo "Found running jobs: $(echo "$PROCEEDING_CHECKS" | sort | tr '\n' ',' | sed 's/,$//')"
+            sleep "$INTERVAL"
+          done
