@@ -4,16 +4,23 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
+permissions: {}
+
 jobs:
   check_version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: generate_token
+        with:
+          client-id: ${{ secrets.GH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: true
+          token: ${{ steps.generate_token.outputs.token }}
+          persist-credentials: false
       - id: current_gcloud_sdk_version
         name: Get current gcloud-sdk version
         run: echo "version=$(cat ./gcloud_sdk_version.txt)" >> $GITHUB_OUTPUT
@@ -36,7 +43,7 @@ jobs:
       - name: Create pull-request if new version is published
         if: ${{ steps.current_gcloud_sdk_version.outputs.version != steps.latest_gcloud_sdk_version.outputs.version }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
           CURRENT_VERSION: ${{ steps.current_gcloud_sdk_version.outputs.version }}
           NEW_VERSION: ${{ steps.latest_gcloud_sdk_version.outputs.version }}
         run: |
@@ -57,6 +64,8 @@ jobs:
           git config user.email github-actions@github.com
           COMMIT_MESSAGE="update gcloud-sdk version to $NEW_VERSION"
           git commit -m "$COMMIT_MESSAGE"
+
+          gh auth setup-git
           git push origin "$BRANCH"
 
           gh pr create -B main -H "$BRANCH" -t "$COMMIT_MESSAGE" -b "Update from $CURRENT_VERSION to $NEW_VERSION"
